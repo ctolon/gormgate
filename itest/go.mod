@@ -4,8 +4,8 @@ go 1.26
 
 require (
 	github.com/glebarez/sqlite v1.11.0
-	github.com/go-sql-driver/mysql v1.9.3
-	github.com/godror/godror v0.51.0
+	github.com/go-sql-driver/mysql v1.10.1
+	github.com/godror/godror v0.51.5
 	github.com/oracle-samples/gorm-oracle v1.1.3
 	gorm.io/driver/clickhouse v0.7.0
 	gorm.io/driver/gaussdb v0.1.0
@@ -23,7 +23,7 @@ require (
 )
 
 require (
-	filippo.io/edwards25519 v1.1.0 // indirect
+	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/ClickHouse/ch-go v0.61.5 // indirect
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.0 // indirect
 	github.com/HuaweiCloudDeveloper/gaussdb-go v1.0.0-rc1 // indirect
@@ -60,7 +60,6 @@ require (
 	go.opentelemetry.io/otel v1.26.0 // indirect
 	go.opentelemetry.io/otel/trace v1.26.0 // indirect
 	golang.org/x/crypto v0.52.0 // indirect
-	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
