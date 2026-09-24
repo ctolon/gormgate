@@ -1,0 +1,9 @@
+# Normalise every text file to LF in the working tree, on every platform.
+# The writer's golden files are compared with generated source, which is
+# always LF; a CRLF checkout on Windows would fail that comparison for a
+# reason that has nothing to do with the code.
+* text=auto eol=lf
+
+# Generated and captured files, so that a diff of them is not reviewed as
+# hand-written code.
+internal/writer/testdata/*.golden linguist-generated=true

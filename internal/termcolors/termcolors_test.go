@@ -170,7 +170,11 @@ func TestColorStyle_TerminalDetection(t *testing.T) {
 	if got := ColorStyle(false, env(false, vars)).SQLKeyword("x"); got != "x" {
 		t.Errorf("without a terminal and without --force-color: %q, want %q", got, "x")
 	}
-	if got := ColorStyle(false, env(true, vars)).SQLKeyword("x"); got != "\x1b[34mx\x1b[0m" {
+	// On Windows a terminal only takes colour when one of the markers
+	// supportsColor looks for is set, so this case sets one: without it the
+	// assertion would be about the platform rather than about the style.
+	onTTY := map[string]string{"GORMGATE_COLORS": "light", "WT_SESSION": "1"}
+	if got := ColorStyle(false, env(true, onTTY)).SQLKeyword("x"); got != "\x1b[34mx\x1b[0m" {
 		t.Errorf("on a terminal: %q, want the light SQL_KEYWORD", got)
 	}
 	if got := ColorStyle(true, env(false, vars)).SQLKeyword("x"); got != "\x1b[34mx\x1b[0m" {

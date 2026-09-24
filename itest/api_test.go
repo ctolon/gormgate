@@ -35,6 +35,7 @@ func (apiUser) TableName() string { return "api_users" }
 // has written a file that is not compiled in, the next command refuses to
 // run.
 func TestCallCommand(t *testing.T) {
+	skipUnlessVendor(t, "pg18")
 	_, info := dbtest.Open(t, "pg18")
 	dir := t.TempDir()
 	var out, errOut bytes.Buffer
@@ -86,6 +87,7 @@ func TestCallCommand(t *testing.T) {
 // migration is applied on the database the router allows and skipped on
 // the other, while the migration is still recorded on both.
 func TestRouters(t *testing.T) {
+	skipUnlessVendor(t, "pg18")
 	dbAllowed, _ := dbtest.Open(t, "pg18")
 	dbDenied, _ := dbtest.Open(t, "pg18")
 
@@ -148,6 +150,7 @@ func (f routerFunc) AllowMigrate(db, app string, h gormgate.Hints) *bool {
 // the plan, the verbosity, and whether the command may prompt (--no-input
 // clears Interactive).
 func TestMigrateHooks(t *testing.T) {
+	skipUnlessVendor(t, "pg18")
 	_, info := dbtest.Open(t, "pg18")
 	dir := t.TempDir()
 	// The migration registry is process-global by design — a migration
