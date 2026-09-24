@@ -1,0 +1,19 @@
+# Test and build output
+*.test
+*.out
+/dist/
+
+# Local databases created by the examples
+*.sqlite3
+*.db
+
+# Documentation site build
+/site/
+/.venv/
+__pycache__/
+
+# Editor and OS noise
+.DS_Store
+*.swp
+.idea/
+.vscode/

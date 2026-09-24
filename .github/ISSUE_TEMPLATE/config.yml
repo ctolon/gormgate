@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/ctolon/gormgate/discussions
+    about: Ask how to do something, or propose an idea before opening an issue.
+  - name: Deliberately unsupported Django concepts
+    url: https://github.com/ctolon/gormgate/blob/main/docs/not-applicable.md
+    about: Managers, proxy models, inheritance and other concepts that have no GORM equivalent, with the reason for each.

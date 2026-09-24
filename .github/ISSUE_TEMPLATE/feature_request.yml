@@ -1,0 +1,32 @@
+name: Feature request
+description: Something gormgate should be able to do.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        gormgate's scope is Django 6.0's migration framework. If Django has
+        the feature, say which command or API it is and we port it. If it
+        does not, explain why gormgate should have it anyway.
+
+        Concepts that were deliberately left out, with reasons, are in
+        [`docs/not-applicable.md`](https://github.com/ctolon/gormgate/blob/main/docs/not-applicable.md).
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that you cannot do today?
+    validations:
+      required: true
+  - type: input
+    id: django
+    attributes:
+      label: Django equivalent
+      description: The Django command, option or API this corresponds to, if there is one.
+      placeholder: manage.py makemigrations --scriptable
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What it would look like
+      description: The command line or the Go API you have in mind.
+      render: go

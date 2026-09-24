@@ -1,0 +1,97 @@
+name: Release
+
+# Releases are cut by pushing a tag. The job re-runs the gates that do not
+# need a database (CI covers the rest on every push) and then publishes the
+# release notes for that version from CHANGELOG.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.26"
+  # Pinned: a new staticcheck release must not turn the build red on its
+  # own. Bump it deliberately, with the fixes it asks for.
+  STATICCHECK_VERSION: "2026.2.1"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: The tag must match the module's major version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          major="${tag%%.*}"
+          module=$(head -1 go.mod | awk '{print $2}')
+          case "$major" in
+            0|1) want="github.com/ctolon/gormgate" ;;
+            *)   want="github.com/ctolon/gormgate/v$major" ;;
+          esac
+          if [ "$module" != "$want" ]; then
+            echo "tag $GITHUB_REF_NAME needs module path $want, go.mod says $module" >&2
+            exit 1
+          fi
+      - run: go build ./...
+      - run: go vet ./...
+      - name: staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@${{ env.STATICCHECK_VERSION }}
+          staticcheck ./...
+      - run: go test ./...
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l . itest parity/goproj examples/*/)
+          if [ -n "$unformatted" ]; then echo "$unformatted"; exit 1; fi
+
+  release:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract this version's section from CHANGELOG.md
+        id: notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # Stop at the next version heading, and at the link-reference
+          # block Keep a Changelog puts at the end of the file.
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/        { exit }
+            found && /^\[[^]]+\]: /  { exit }
+            found                    { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "CHANGELOG.md has no section for [$version]" >&2
+            exit 1
+          fi
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          case "$GITHUB_REF_NAME" in
+            *-*) prerelease="--prerelease" ;;
+          esac
+          gh release create "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file release-notes.md \
+            $prerelease
+
+  proxy:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask the module proxy to fetch the new version
+        # Makes the version show up on pkg.go.dev without waiting for
+        # someone to request it first.
+        run: |
+          curl -fsS "https://proxy.golang.org/github.com/ctolon/gormgate/@v/${GITHUB_REF_NAME}.info" > /dev/null

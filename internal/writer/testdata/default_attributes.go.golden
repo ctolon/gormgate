@@ -1,0 +1,14 @@
+package migrations
+
+import (
+	m "github.com/ctolon/gormgate/migrations"
+)
+
+func init() {
+	m.Register(&m.Migration{
+		App:          "testapp",
+		Name:         "0001_initial",
+		Dependencies: []m.Key{},
+		Operations:   []m.Operation{},
+	})
+}

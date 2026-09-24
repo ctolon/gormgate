@@ -1,0 +1,74 @@
+package migrations
+
+import (
+	m "github.com/ctolon/gormgate/migrations"
+	"time"
+)
+
+func init() {
+	m.Register(&m.Migration{
+		App:  "testapp",
+		Name: "0002_simple",
+		Dependencies: []m.Key{
+			{App: "testapp", Name: "some_other_one"},
+		},
+		Operations: []m.Operation{
+			&m.CreateModel{
+				Name:  "MyModel",
+				Table: "testapp_mymodel",
+				Fields: m.Fields{
+					{Name: "charfield", Field: m.Field{
+						Type: m.String,
+						Size: 100,
+					}},
+					{Name: "datetimefield", Field: m.Field{
+						Type:    m.Time,
+						Default: time.Now,
+					}},
+				},
+			},
+			&m.CreateModel{
+				Name:  "MyModel2",
+				Table: "testapp_mymodel2",
+				Fields: m.Fields{
+					{Name: "charfield", Field: m.Field{
+						Type: m.String,
+						Size: 100,
+					}},
+					{Name: "datetimefield", Field: m.Field{
+						Type:    m.Time,
+						Default: time.Now,
+					}},
+				},
+			},
+			&m.CreateModel{
+				Name:  "MyModel3",
+				Table: "testapp_mymodel3",
+				Fields: m.Fields{
+					{Name: "charfield", Field: m.Field{
+						Type: m.String,
+						Size: 100,
+					}},
+					{Name: "datetimefield", Field: m.Field{
+						Type:    m.Time,
+						Default: time.Now,
+					}},
+				},
+				Options: m.Options{
+					Managed: m.Ptr(false),
+				},
+			},
+			&m.DeleteModel{
+				Name: "MyModel",
+			},
+			&m.AddField{
+				ModelName: "OtherModel",
+				Name:      "datetimefield",
+				Field: m.Field{
+					Type:    m.Time,
+					Default: time.Now,
+				},
+			},
+		},
+	})
+}

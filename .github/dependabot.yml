@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  # The integration module pins every database driver. An update here must
+  # pass the gorm-parity suite, which compares gormgate's DDL with the
+  # driver's own AutoMigrate output.
+  - package-ecosystem: gomod
+    directory: /itest
+    schedule:
+      interval: weekly
+    groups:
+      database-drivers:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

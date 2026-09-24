@@ -1,0 +1,30 @@
+package migrations
+
+import (
+	"github.com/ctolon/gormgate/internal/writer"
+	m "github.com/ctolon/gormgate/migrations"
+)
+
+func init() {
+	m.Register(&m.Migration{
+		App:  "testapp",
+		Name: "0001_squashed_0002",
+		Replaces: []m.Key{
+			{App: "testapp", Name: "0001_initial"},
+			{App: "testapp", Name: "0002_second"},
+		},
+		Initial:      m.Ptr(true),
+		Dependencies: []m.Key{},
+		Operations: []m.Operation{
+			&m.RunSQL{
+				SQL:        m.Script("SELECT 1"),
+				ReverseSQL: m.Statements{},
+			},
+			&m.RunGo{
+				Code:        writer.packageFunc,
+				ReverseCode: writer.packageReverse,
+				IsElidable:  true,
+			},
+		},
+	})
+}

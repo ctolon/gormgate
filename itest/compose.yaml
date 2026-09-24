@@ -1,0 +1,266 @@
+# Integration-test database servers for gormgate.
+#
+#   docker compose -f itest/compose.yaml up -d --wait <service...>
+#
+# Every service publishes a fixed host port on 127.0.0.1 (see README.md).
+# Data directories live on tmpfs wherever the server supports it, so every
+# `up` starts from an empty server and `down` throws everything away.
+name: gormgate-itest
+
+x-common: &common
+  restart: "no"
+  stop_grace_period: 5s
+
+services:
+  pg14:
+    <<: *common
+    image: postgres:14
+    environment:
+      POSTGRES_USER: gormgate
+      POSTGRES_PASSWORD: gormgate
+      POSTGRES_DB: gormgate
+    command: ["postgres", "-c", "fsync=off", "-c", "full_page_writes=off", "-c", "synchronous_commit=off", "-c", "max_connections=300"]
+    tmpfs:
+      - /var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:15414:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U gormgate -d gormgate"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  pg18:
+    <<: *common
+    image: postgres:18
+    environment:
+      POSTGRES_USER: gormgate
+      POSTGRES_PASSWORD: gormgate
+      POSTGRES_DB: gormgate
+    command: ["postgres", "-c", "fsync=off", "-c", "full_page_writes=off", "-c", "synchronous_commit=off", "-c", "max_connections=300"]
+    # postgres:18 keeps PGDATA under /var/lib/postgresql/18/docker.
+    tmpfs:
+      - /var/lib/postgresql
+    ports:
+      - "127.0.0.1:15418:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U gormgate -d gormgate"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  mysql80:
+    <<: *common
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: gormgate
+      MYSQL_ROOT_HOST: "%"
+    command: ["--innodb-flush-log-at-trx-commit=0", "--skip-log-bin", "--max-connections=500"]
+    tmpfs:
+      - /var/lib/mysql
+    ports:
+      - "127.0.0.1:13380:3306"
+    healthcheck:
+      # 127.0.0.1 forces TCP, which the init-time temporary server (started
+      # with --skip-networking) does not accept.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pgormgate --silent"]
+      interval: 2s
+      timeout: 5s
+      retries: 90
+
+  mysql84:
+    <<: *common
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: gormgate
+      MYSQL_ROOT_HOST: "%"
+    command: ["--innodb-flush-log-at-trx-commit=0", "--skip-log-bin", "--max-connections=500"]
+    tmpfs:
+      - /var/lib/mysql
+    ports:
+      - "127.0.0.1:13384:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pgormgate --silent"]
+      interval: 2s
+      timeout: 5s
+      retries: 90
+
+  mariadb106:
+    <<: *common
+    image: mariadb:10.6
+    environment:
+      MARIADB_ROOT_PASSWORD: gormgate
+      MARIADB_ROOT_HOST: "%"
+    command: ["--innodb-flush-log-at-trx-commit=0", "--max-connections=500"]
+    tmpfs:
+      - /var/lib/mysql
+    ports:
+      - "127.0.0.1:13406:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      timeout: 5s
+      retries: 90
+
+  mariadb118:
+    <<: *common
+    image: mariadb:11.8
+    environment:
+      MARIADB_ROOT_PASSWORD: gormgate
+      MARIADB_ROOT_HOST: "%"
+    command: ["--innodb-flush-log-at-trx-commit=0", "--max-connections=500"]
+    tmpfs:
+      - /var/lib/mysql
+    ports:
+      - "127.0.0.1:13418:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      timeout: 5s
+      retries: 90
+
+  tidb:
+    <<: *common
+    image: pingcap/tidb:v8.5.1
+    # Standalone TiDB on the embedded unistore engine. The init SQL file is
+    # executed once on first bootstrap and turns on CHECK constraint
+    # enforcement (tidb_enable_check_constraint is OFF by default).
+    command:
+      - "--store=unistore"
+      - "--path=/data/tidb"
+      - "--initialize-sql-file=/etc/tidb/init.sql"
+    volumes:
+      - ./docker/tidb/init.sql:/etc/tidb/init.sql:ro
+    tmpfs:
+      - /data
+    ports:
+      - "127.0.0.1:14000:4000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:10080/status"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  cockroach:
+    <<: *common
+    image: cockroachdb/cockroach:latest-v25.2
+    command: ["start-single-node", "--insecure", "--store=type=mem,size=2GiB", "--listen-addr=:26257", "--http-addr=:8080"]
+    ports:
+      - "127.0.0.1:15426:26257"
+      - "127.0.0.1:18080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf 'http://127.0.0.1:8080/health?ready=1'"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  mssql:
+    <<: *common
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "GormGate-Pass123"
+      MSSQL_PID: Developer
+      MSSQL_MEMORY_LIMIT_MB: "2048"
+    # The server runs as uid 10001 (mssql); the tmpfs must be owned by it.
+    tmpfs:
+      - /var/opt/mssql:uid=10001,gid=0,mode=0770
+    ports:
+      - "127.0.0.1:14330:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S 127.0.0.1 -U sa -P \"$${MSSQL_SA_PASSWORD}\" -b -Q 'SELECT 1' >/dev/null"]
+      interval: 3s
+      timeout: 10s
+      retries: 60
+      start_period: 10s
+
+  oracle:
+    <<: *common
+    image: gvenzl/oracle-free:23-slim
+    # No tmpfs: the image ships its database files under /opt/oracle/oradata;
+    # they live in the container's writable layer, which `down` discards.
+    environment:
+      ORACLE_PASSWORD: "GormGate123"
+      APP_USER: gormgate
+      APP_USER_PASSWORD: gormgate
+    volumes:
+      # Runs once, after APP_USER exists: lets gormgate create per-test users.
+      - ./docker/oracle:/container-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:15210:1521"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 5s
+      timeout: 10s
+      retries: 120
+      start_period: 20s
+
+  gauss:
+    <<: *common
+    image: opengauss/opengauss-server:latest
+    environment:
+      # GS_PASSWORD is the password of the initial superuser "omm" (used by the
+      # healthcheck over the local socket). GS_USERNAME is created by the
+      # entrypoint with "grant all privileges" (SYSADMIN) and is what tests use.
+      GS_PASSWORD: "Gormgate-123"
+      GS_USERNAME: gormgate
+      GS_USER_PASSWORD: "Gormgate-123"
+      # See README.md ("openGauss authentication").
+      GS_HOST_AUTH_METHOD: sha256
+      OTHER_PG_CONF: "password_encryption_type = 2\nmax_connections = 300"
+    tmpfs:
+      - /var/lib/opengauss:uid=70,gid=70
+    ports:
+      - "127.0.0.1:15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "su - omm -c \"gsql -d postgres -p 5432 -c 'select 1'\" >/dev/null 2>&1"]
+      interval: 3s
+      timeout: 10s
+      retries: 80
+      start_period: 10s
+
+  clickhouse:
+    <<: *common
+    image: clickhouse/clickhouse-server:25.8
+    environment:
+      CLICKHOUSE_USER: gormgate
+      CLICKHOUSE_PASSWORD: gormgate
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    tmpfs:
+      - /var/lib/clickhouse
+    ports:
+      - "127.0.0.1:19000:9000"
+      - "127.0.0.1:18123:8123"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8123/ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  # Go test runner with Oracle Instant Client (godror needs libclntsh).
+  # Not started by `up`; used via `make oracle-smoke`.
+  oracle-runner:
+    profiles: ["runner"]
+    build:
+      context: .
+      dockerfile: oracle.Dockerfile
+    image: gormgate-itest-oracle-runner:latest
+    working_dir: /src/itest
+    volumes:
+      - ..:/src
+      - gomodcache:/go/pkg/mod
+      - gobuildcache:/root/.cache/go-build
+    environment:
+      GORMGATE_ITEST_ORACLE_DSN: 'user="gormgate" password="gormgate" connectString="oracle:1521/FREEPDB1"'
+      GORMGATE_ITEST_REQUIRE: "1"
+    depends_on:
+      oracle:
+        condition: service_healthy
+
+volumes:
+  gomodcache:
+  gobuildcache:

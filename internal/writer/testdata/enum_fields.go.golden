@@ -1,0 +1,68 @@
+package migrations
+
+import (
+	m "github.com/ctolon/gormgate/migrations"
+)
+
+func init() {
+	m.Register(&m.Migration{
+		App:          "testapp",
+		Name:         "0001_enums",
+		Dependencies: []m.Key{},
+		Operations: []m.Operation{
+			&m.CreateModel{
+				Name:  "Book",
+				Table: "testapp_book",
+				Fields: m.Fields{
+					{Name: "author_id", Field: m.Field{
+						Type: m.Int,
+						Size: 64,
+						ForeignKey: &m.ForeignKey{
+							To:       "testapp.Author",
+							ToField:  "id",
+							OnDelete: "CASCADE",
+							OnUpdate: "RESTRICT",
+							Name:     "fk_testapp_book_author",
+						},
+					}},
+				},
+			},
+			&m.AddIndex{
+				ModelName: "Book",
+				Index: m.Index{
+					Name: "idx_book_title",
+					Fields: []m.IndexField{
+						{
+							Column: "title",
+							Sort:   "DESC",
+						},
+						{
+							Column: "isbn",
+							Sort:   "ASC",
+						},
+					},
+				},
+			},
+			&m.AddConstraint{
+				ModelName: "Book",
+				Constraint: &m.UniqueConstraint{
+					Name: "uniq_book_isbn",
+					Fields: []string{
+						"isbn",
+					},
+					Deferrable: "DEFERRED",
+				},
+			},
+			&m.AddConstraint{
+				ModelName: "Book",
+				Constraint: &m.UniqueConstraint{
+					Name: "uniq_book_title",
+					Fields: []string{
+						"title",
+					},
+					Deferrable: "IMMEDIATE",
+				},
+			},
+		},
+	})
+}

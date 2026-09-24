@@ -1,0 +1,36 @@
+package migrations
+
+import (
+	m "github.com/ctolon/gormgate/migrations"
+)
+
+func init() {
+	m.Register(&m.Migration{
+		App:          "testapp",
+		Name:         "0001_composite_fk",
+		Dependencies: []m.Key{},
+		Operations: []m.Operation{
+			&m.AddConstraint{
+				ModelName: "Stall",
+				Constraint: &m.ForeignKeyConstraint{
+					Name: "fk_testapp_stall_barn",
+					Fields: []string{
+						"barn_tenant_id",
+						"barn_code",
+					},
+					To: "testapp.Barn",
+					ToFields: []string{
+						"tenant_id",
+						"code",
+					},
+					OnDelete: "CASCADE",
+					OnUpdate: "RESTRICT",
+				},
+			},
+			&m.RemoveConstraint{
+				ModelName: "Stall",
+				Name:      "fk_testapp_stall_barn",
+			},
+		},
+	})
+}

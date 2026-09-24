@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push supersedes the run in flight for the same ref. Tags are never
+# cancelled: a release run has to finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  GO_VERSION: "1.26"
+  # Pinned: a new staticcheck release must not turn the build red on its
+  # own. Bump it deliberately, with the fixes it asks for.
+  STATICCHECK_VERSION: "2026.2.1"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l . itest parity/goproj examples/*/)
+          if [ -n "$unformatted" ]; then echo "$unformatted"; exit 1; fi
+      - name: go vet
+        run: |
+          go vet ./...
+          (cd itest && go vet -tags integration ./...)
+          (cd itest && go vet -tags 'parity integration' ./...)
+          (cd parity/goproj && go vet ./...)
+          for m in examples/*/; do (cd "$m" && go vet ./...); done
+      - name: The command reference matches the commands
+        # docs/commands/*.md embed the real --help output; this fails if a
+        # flag changed and the page was not regenerated.
+        run: scripts/gen-cli-docs.sh --check
+      - name: staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@${{ env.STATICCHECK_VERSION }}
+          staticcheck ./...
+          (cd itest && staticcheck -tags integration ./...)
+          (cd parity/goproj && staticcheck ./...)
+          for m in examples/*/; do (cd "$m" && staticcheck ./...); done
+
+  unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: go build ./...
+      - run: go test ./...
+
+  integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        vendor:
+          - pg14
+          - pg18
+          - mysql80
+          - mysql84
+          - mariadb106
+          - mariadb118
+          - tidb
+          - cockroach
+          - mssql
+          - gauss
+          - clickhouse
+          - sqlite
+          - sqlite-purego
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Start the database service
+        if: ${{ !startsWith(matrix.vendor, 'sqlite') }}
+        run: docker compose -f itest/compose.yaml up -d --wait ${{ matrix.vendor }}
+      - name: Conformance, gorm parity and the API tests
+        working-directory: itest
+        env:
+          GORMGATE_ITEST_REQUIRE: "1"
+          GORMGATE_ITEST_VENDORS: ${{ matrix.vendor }}
+        # Everything except the two suites with a setup of their own, so
+        # that a test added later is covered without editing this filter.
+        # A test whose vendor is not the one under test skips itself.
+        run: go test -tags integration -count=1 -skip 'TestE2E|TestDjangoParity' .
+      - name: Service logs on failure
+        if: failure() && !startsWith(matrix.vendor, 'sqlite')
+        run: docker compose -f itest/compose.yaml logs ${{ matrix.vendor }}
+
+  oracle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start Oracle
+        run: docker compose -f itest/compose.yaml up -d --wait oracle
+      - name: Conformance and gorm parity in the Oracle runner
+        run: make -C itest oracle-test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: docker compose -f itest/compose.yaml up -d --wait pg18
+      - name: End-to-end CLI
+        working-directory: itest
+        env:
+          GORMGATE_ITEST_REQUIRE: "1"
+        run: go test -tags integration -count=1 -run TestE2E .
+
+  django-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: docker compose -f itest/compose.yaml up -d --wait pg18
+      - name: The same scenarios against Django 6.0
+        working-directory: itest
+        env:
+          GORMGATE_ITEST_REQUIRE: "1"
+        run: go test -tags 'parity integration' -count=1 -run TestDjangoParity .

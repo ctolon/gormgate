@@ -1,0 +1,55 @@
+# Migrations are a step that runs *before* the app, not something the app
+# does to itself at startup:
+#
+#   docker compose run --rm migrate
+#   docker compose up
+#
+# Two app replicas racing to migrate the same database, or a rollback that
+# leaves an old binary talking to a new schema, are what running migrations
+# from inside the app buys you.
+name: gormgate-dockerproj
+
+x-build: &build
+  context: ../..
+  dockerfile: examples/dockerproj/Dockerfile
+
+# The credentials are in the file because this is an example; a deployment
+# would inject the DSN as a secret.
+x-dsn: &dsn "host=db port=5432 user=dockerproj password=dockerproj dbname=dockerproj sslmode=disable"
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: dockerproj
+      POSTGRES_PASSWORD: dockerproj
+      POSTGRES_DB: dockerproj
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dockerproj -d dockerproj"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # In a profile, so `docker compose up` never starts it; `docker compose
+  # run --rm migrate` names it and therefore does. It runs to completion
+  # and exits -- that exit status is the gate on the deploy.
+  migrate:
+    build: *build
+    profiles: ["migrate"]
+    command: ["gorm-gate", "migrate", "--no-input"]
+    environment:
+      DOCKERPROJ_DSN: *dsn
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build: *build
+    command: ["server"]
+    environment:
+      DOCKERPROJ_DSN: *dsn
+    ports:
+      - "127.0.0.1:18088:8080"
+    depends_on:
+      db:
+        condition: service_healthy

@@ -1,0 +1,99 @@
+site_name: gormgate
+site_description: Django-style migrations for GORM
+site_url: https://ctolon.github.io/gormgate/
+repo_url: https://github.com/ctolon/gormgate
+repo_name: ctolon/gormgate
+edit_uri: edit/main/docs/
+copyright: BSD-3-Clause
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - content.code.copy
+    - content.action.edit
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.snippets:
+      # The Go examples in the guide are included from compiled, tested
+      # source rather than pasted, so they cannot go stale.
+      base_path: ['.']
+      check_paths: true
+  - pymdownx.tabbed:
+      alternate_style: true
+
+# The docs directory also holds the build's own requirements file, which is
+# not a page.
+exclude_docs: |
+  requirements.txt
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Examples: examples.md
+  - Architecture: architecture.md
+  - Guide:
+      - Models and fields: guide/models.md
+      - Writing migrations: guide/writing-migrations.md
+      - Data migrations: guide/data-migrations.md
+      - Multiple databases: guide/routers-and-hooks.md
+      - An existing database: guide/existing-database.md
+      - Squashing history: guide/squashing.md
+      - Leaving gormgate: guide/leaving.md
+  - Commands:
+      - Overview: commands/index.md
+      - makemigrations: commands/makemigrations.md
+      - migrate: commands/migrate.md
+      - showmigrations: commands/showmigrations.md
+      - sqlmigrate: commands/sqlmigrate.md
+      - squashmigrations: commands/squashmigrations.md
+      - optimizemigration: commands/optimizemigration.md
+      - sqlsequencereset: commands/sqlsequencereset.md
+      - inspectdb: commands/inspectdb.md
+      - check: commands/check.md
+  - Databases: vendors.md
+  - Coming from Django:
+      - Feature map: from-django.md
+      - Upgrading Django: upgrading-django.md
+      - Deviations: deviations.md
+      - Not applicable: not-applicable.md
+  - Limitations: limitations.md

@@ -1,0 +1,50 @@
+name: Upstream canary
+
+# gormgate's contract is that it takes the same decisions as a specific
+# Django on a specific CPython, and both are pinned. This job runs the same
+# parity suite against the *latest* releases in those series, weekly, so
+# that a change upstream is seen the week it lands rather than when a user
+# hits it.
+#
+# It is deliberately not a required check: a failure here means upstream
+# moved, not that this repository is broken. Start from
+# docs/upgrading-django.md when it goes red.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      django:
+        description: Django version specifier
+        default: "6.*"
+      python:
+        description: CPython image tag
+        default: "3.14"
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.26"
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: docker compose -f itest/compose.yaml up -d --wait pg18
+      - name: Parity against the latest Django and CPython
+        working-directory: itest
+        env:
+          GORMGATE_ITEST_REQUIRE: "1"
+          GORMGATE_PARITY_DJANGO: ${{ inputs.django || '6.*' }}
+          GORMGATE_PARITY_PYTHON: ${{ inputs.python || '3.14' }}
+        run: go test -tags 'parity integration' -run TestDjangoParity -count=1 -v .
+      - name: What the pins say
+        if: always()
+        run: |
+          echo "The repository pins these; the run above used the latest instead."
+          grep -E 'ARG (PYTHON|DJANGO|PSYCOPG)_VERSION' parity/Dockerfile

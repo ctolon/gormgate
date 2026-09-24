@@ -1,0 +1,33 @@
+package migrations
+
+import (
+	m "github.com/ctolon/gormgate/migrations"
+	"math"
+	"time"
+)
+
+func init() {
+	m.Register(&m.Migration{
+		App:          "testapp",
+		Name:         "0002_imports",
+		Dependencies: []m.Key{},
+		Operations: []m.Operation{
+			&m.AddField{
+				ModelName: "mymodel",
+				Name:      "myfield",
+				Field: m.Field{
+					Type:    m.Time,
+					Default: time.Date(2012, time.January, 1, 1, 1, 0, 0, time.UTC),
+				},
+			},
+			&m.AddField{
+				ModelName: "mymodel",
+				Name:      "myfield2",
+				Field: m.Field{
+					Type:    m.Float,
+					Default: math.Inf(1),
+				},
+			},
+		},
+	})
+}

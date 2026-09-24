@@ -1,0 +1,60 @@
+name: Bug report
+description: Something gormgate does is wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If gormgate *decides* something different from Django — a different
+        migration, a different operation, a different order — say so: that
+        is a bug by definition unless it is in `docs/deviations.md`.
+        Differences in wording are not bugs; the output is gormgate's own.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran and what it did. Paste the command and its full output.
+      render: console
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: If Django does it differently, paste what Django prints or generates.
+    validations:
+      required: true
+  - type: textarea
+    id: models
+    attributes:
+      label: Models and migrations
+      description: The smallest model structs and migration that reproduce it.
+      render: go
+    validations:
+      required: true
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      multiple: true
+      options:
+        - PostgreSQL
+        - CockroachDB
+        - GaussDB / openGauss
+        - SQLite
+        - MySQL
+        - MariaDB
+        - TiDB
+        - SQL Server
+        - Oracle
+        - ClickHouse
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: gormgate, Go, GORM, the database server, and the gorm driver.
+      placeholder: gormgate v0.1.0, go1.26, gorm v1.31.2, PostgreSQL 18, gorm.io/driver/postgres v1.6.0
+    validations:
+      required: true

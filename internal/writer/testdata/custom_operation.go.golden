@@ -1,0 +1,26 @@
+package migrations
+
+import (
+	"github.com/ctolon/gormgate/internal/writer"
+	m "github.com/ctolon/gormgate/migrations"
+)
+
+func init() {
+	m.Register(&m.Migration{
+		App:          "testapp",
+		Name:         "0001_initial",
+		Dependencies: []m.Key{},
+		Operations: []m.Operation{
+			&writer.TestOperation{},
+			&writer.TestOperation{
+				Arg1: "x",
+				Arg2: 1,
+			},
+			&m.CreateModel{
+				Name:   "MyModel",
+				Table:  "testapp_mymodel",
+				Fields: m.Fields{},
+			},
+		},
+	})
+}
